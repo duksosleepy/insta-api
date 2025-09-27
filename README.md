@@ -59,7 +59,7 @@ GET /api/instagram-info?url=https://www.instagram.com/p/Cxyz123/
   "owner_username": "username",
   "like_count": 123,
   "comment_count": 5,
-  "media_type": "GraphImage",
+  "media_type": "image",
   "media_url": "https://...",
   "is_video": false,
   "date_utc": "2023-01-01T12:00:00+00:00",
