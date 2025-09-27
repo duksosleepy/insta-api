@@ -17,7 +17,7 @@ uv sync
 ## Running the Server
 
 ```bash
-python server.py
+uv run server.py
 # or
 uvicorn api:app --host 0.0.0.0 --port 8000 --reload
 ```
