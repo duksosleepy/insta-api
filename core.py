@@ -1,7 +1,8 @@
 import re
 
+import httpx
 import instaloader
-from instaloader import Post, Profile
+from instaloader import Post
 from loguru import logger
 
 type dict_value = str | int | bool | None
@@ -39,7 +40,6 @@ class InstagramLoader:
         return {'error': error_msg}
 
     def _extract_post_info(self, shortcode: str) -> dict[str, dict_value]:
-        """Extract post/reel information and return PostResponse-ready data"""
         logger.debug(f'Extracting post info for shortcode: {shortcode}')
         try:
             post = Post.from_shortcode(self.L.context, shortcode)
@@ -100,28 +100,43 @@ class InstagramLoader:
             return {'error': error_msg}
 
     def _extract_profile_info(self, username: str) -> dict[str, dict_value]:
-        """Extract profile information and return ProfileResponse-ready data"""
         logger.debug(f'Extracting profile info for username: {username}')
         try:
-            profile = Profile.from_username(self.L.context, username)
-            result = {
-                'type': 'profile',
-                'username': profile.username,
-                'userid': int(profile.userid),
-                'full_name': profile.full_name,
-                'biography': profile.biography,
-                'followers': profile.followers,
-                'followees': profile.followees,
-                'mediacount': profile.mediacount,
-                'is_private': profile.is_private,
-                'is_verified': profile.is_verified,
-                'profile_pic_url': profile.profile_pic_url,
-                'external_url': profile.external_url,
+            url = f'https://www.instagram.com/api/v1/users/web_profile_info/?username={username}'
+
+            headers = {
+                'accept': '*/*',
+                'accept-language': 'en-US,en;q=0.9',
+                'x-ig-app-id': '936619743392459',
             }
-            logger.success(
-                f'Successfully extracted profile info for username: {username}'
-            )
-            return result
+
+            response = httpx.get(url, headers=headers)
+
+            if response.status_code == 200:
+                user = response.json()['data']['user']
+
+                result = {
+                    'type': 'profile',
+                    'username': user['username'],
+                    'userid': int(user['id']),
+                    'full_name': user['full_name'],
+                    'biography': user['biography'],
+                    'followers': user['edge_followed_by']['count'],
+                    'followees': user['edge_follow']['count'],
+                    'mediacount': user['edge_owner_to_timeline_media']['count'],
+                    'is_private': user['is_private'],
+                    'is_verified': user['is_verified'],
+                    'profile_pic_url': user['profile_pic_url_hd'],
+                    'external_url': user['external_url'],
+                }
+                logger.success(
+                    f'Successfully extracted profile info for username: {username}'
+                )
+                return result
+            else:
+                error_msg = f'Failed to extract profile info for username {username}: HTTP {response.status_code}'
+                logger.error(error_msg)
+                return {'error': error_msg}
         except Exception as e:
             error_msg = (
                 f'Failed to extract profile info for username {username}: {e}'
